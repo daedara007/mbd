@@ -1,0 +1,654 @@
+-- 1. Buat Tipe Data ENUM untuk Status
+CREATE TYPE status_node_enum AS ENUM ('online', 'offline', 'maintenance');
+CREATE TYPE status_instance_enum AS ENUM ('running', 'stopped', 'starting', 'error');
+
+-- 2. Tabel Pengguna
+CREATE TABLE Pengguna (
+    id_pengguna UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    nama VARCHAR(100) NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    saldo_kredit DECIMAL(15, 2) DEFAULT 0.00,
+    dibuat_pada TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 3. Tabel Node_Server (Mesin Induk Fisik)
+CREATE TABLE Node_Server (
+    id_node SERIAL PRIMARY KEY,
+    nama_node VARCHAR(50) NOT NULL,
+    ip_publik VARCHAR(45) NOT NULL,
+    lokasi_datacenter VARCHAR(50) NOT NULL,
+    status_node status_node_enum DEFAULT 'online'
+);
+
+-- 4. Tabel Paket_Layanan (Katalog Spesifikasi)
+CREATE TABLE Paket_Layanan (
+    id_paket SERIAL PRIMARY KEY,
+    nama_paket VARCHAR(50) NOT NULL,
+    vcore_cpu INT NOT NULL,
+    ram_mb INT NOT NULL,
+    storage_gb INT NOT NULL,
+    harga_per_bulan DECIMAL(15, 2) NOT NULL
+);
+
+-- 5. Tabel Instance_Server (Server Milik Pengguna)
+CREATE TABLE Instance_Server (
+    id_instance UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id_pengguna UUID NOT NULL,
+    id_paket INT NOT NULL,
+    id_node INT NOT NULL,
+    nama_instance VARCHAR(100) NOT NULL,
+    port_koneksi INT NOT NULL,
+    status_instance status_instance_enum DEFAULT 'stopped',
+    is_active BOOLEAN DEFAULT TRUE,
+    dibuat_pada TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    
+    -- Definisi Foreign Key
+    CONSTRAINT fk_pengguna FOREIGN KEY (id_pengguna) REFERENCES Pengguna(id_pengguna),
+    CONSTRAINT fk_paket FOREIGN KEY (id_paket) REFERENCES Paket_Layanan(id_paket),
+    CONSTRAINT fk_node FOREIGN KEY (id_node) REFERENCES Node_Server(id_node)
+);
+
+-- 6. Tabel Transaksi (Riwayat Keuangan)
+CREATE TABLE Transaksi (
+    id_transaksi UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id_pengguna UUID NOT NULL,
+    id_instance UUID, -- Bisa null jika transaksi bukan terkait spesifik server (misal: top up saldo)
+    jenis_transaksi VARCHAR(50) NOT NULL,
+    nominal DECIMAL(15, 2) NOT NULL,
+    tanggal_transaksi TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    
+    CONSTRAINT fk_transaksi_pengguna FOREIGN KEY (id_pengguna) REFERENCES Pengguna(id_pengguna),
+    CONSTRAINT fk_transaksi_instance FOREIGN KEY (id_instance) REFERENCES Instance_Server(id_instance)
+);
+
+-- 7. Tabel Log_Aktivasi (Catatan Sistem oleh Trigger)
+CREATE TABLE Log_Aktivasi (
+    id_log BIGSERIAL PRIMARY KEY,
+    id_instance UUID NOT NULL,
+    aksi VARCHAR(50) NOT NULL,
+    waktu_eksekusi TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    pesan_sistem TEXT,
+    
+    CONSTRAINT fk_log_instance FOREIGN KEY (id_instance) REFERENCES Instance_Server(id_instance)
+);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+-- 1. Isi Data Mesin Induk (Node)
+INSERT INTO Node_Server (nama_node, ip_publik, lokasi_datacenter, status_node) VALUES
+('Node-Alpha-ID', '103.150.10.5', 'Jakarta, Indonesia', 'online'),
+('Node-Beta-SG', '128.199.20.7', 'Singapore', 'online');
+
+-- 2. Isi Katalog Paket Spesifikasi
+INSERT INTO Paket_Layanan (nama_paket, vcore_cpu, ram_mb, storage_gb, harga_per_bulan) VALUES
+('Starter (Survival)', 2, 2048, 20, 50000.00),
+('Pro (Minigames)', 4, 4096, 50, 120000.00),
+('Extreme (Modded)', 8, 8192, 100, 250000.00);
+
+-- 3. Isi Data Pengguna Uji Coba
+INSERT INTO Pengguna (nama, email, saldo_kredit) VALUES
+('Kevin Jonathan', 'kevin@example.com', 500000.00),
+('Admin Test', 'admin@example.com', 15000.00);
+
+
+
+
+
+
+
+
+
+
+
+CREATE INDEX idx_instance_pengguna ON Instance_Server(id_pengguna);
+
+CREATE OR REPLACE VIEW vw_dashboard_pengguna AS
+SELECT 
+    i.id_pengguna,
+    i.id_instance,
+    i.nama_instance,
+    i.status_instance,
+    i.port_koneksi,
+    n.ip_publik,
+    p.nama_paket,
+    p.vcore_cpu,
+    p.ram_mb
+FROM Instance_Server i
+JOIN Node_Server n ON i.id_node = n.id_node
+JOIN Paket_Layanan p ON i.id_paket = p.id_paket
+WHERE i.is_active = TRUE;
+
+
+
+CREATE OR REPLACE FUNCTION fn_get_dashboard_json(p_id_pengguna UUID)
+RETURNS json AS $$
+DECLARE
+    hasil_json json;
+BEGIN
+    -- Merakit baris data menjadi array JSON
+    SELECT json_agg(json_build_object(
+        'id_instance', id_instance,
+        'nama_instance', nama_instance,
+        'status', status_instance,
+        'alamat_koneksi', ip_publik || ':' || port_koneksi,
+        'spesifikasi', nama_paket || ' (' || vcore_cpu || ' Core, ' || ram_mb || ' MB)'
+    ))
+    INTO hasil_json
+    FROM vw_dashboard_pengguna
+    WHERE id_pengguna = p_id_pengguna;
+
+    -- Jika pengguna belum punya server sama sekali
+    IF hasil_json IS NULL THEN
+        hasil_json := '[]'::json;
+    END IF;
+
+    -- Membungkus hasil akhir dengan pesan status
+    RETURN json_build_object(
+        'status', 'success',
+        'data', hasil_json
+    );
+END;
+$$ LANGUAGE plpgsql;
+
+
+select * from pengguna;
+
+INSERT INTO Instance_Server (id_pengguna, id_paket, id_node, nama_instance, port_koneksi, status_instance)
+SELECT id_pengguna, 1, 1, 'Server Survival Kevin', 25565, 'running'
+FROM Pengguna WHERE email = 'kevin@example.com';
+
+
+SELECT fn_get_dashboard_json(id_pengguna) 
+FROM Pengguna 
+WHERE email = 'kevin@example.com';
+
+explain analyze
+select * from instance_server
+where id_pengguna = 'c6836bac-8df8-4cd3-912a-29bcc0978f3d';
+
+
+
+
+
+
+
+
+CREATE OR REPLACE FUNCTION fn_cek_kelayakan_saldo(p_id_pengguna UUID, p_id_paket INT)
+RETURNS BOOLEAN AS $$
+DECLARE
+    v_saldo DECIMAL;
+    v_harga DECIMAL;
+BEGIN
+    -- Ambil saldo pengguna saat ini
+    SELECT saldo_kredit INTO v_saldo FROM Pengguna WHERE id_pengguna = p_id_pengguna;
+    
+    -- Ambil harga paket layanan
+    SELECT harga_per_bulan INTO v_harga FROM Paket_Layanan WHERE id_paket = p_id_paket;
+    
+    -- Evaluasi kelayakan
+    IF v_saldo >= v_harga THEN
+        RETURN TRUE;
+    ELSE
+        RETURN FALSE;
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+
+
+
+
+
+-- Fungsi pendamping untuk Trigger
+CREATE OR REPLACE FUNCTION fn_trg_log_aktivasi()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO Log_Aktivasi (id_instance, aksi, pesan_sistem)
+    VALUES (NEW.id_instance, 'CREATE', 'Instance berhasil dialokasikan pada node.');
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Pemasangan Trigger pada tabel
+CREATE TRIGGER trg_after_insert_instance
+AFTER INSERT ON Instance_Server
+FOR EACH ROW
+EXECUTE FUNCTION fn_trg_log_aktivasi();
+
+
+
+
+
+
+
+
+
+
+
+
+CREATE OR REPLACE PROCEDURE sp_buat_instance(
+    IN p_id_pengguna UUID,
+    IN p_id_paket INT,
+    IN p_id_node INT,
+    IN p_nama_instance VARCHAR,
+    INOUT p_response JSON DEFAULT NULL
+)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_port INT;
+    v_harga DECIMAL;
+    v_id_instance UUID;
+BEGIN
+    -- Langkah 1: Panggil Function Validasi Saldo (Graceful Error)
+    IF NOT fn_cek_kelayakan_saldo(p_id_pengguna, p_id_paket) THEN
+        p_response := json_build_object(
+            'status', 'error', 
+            'pesan', 'Saldo tidak mencukupi untuk menyewa paket ini.'
+        );
+        RETURN;
+    END IF;
+
+    -- Langkah 2: Ambil harga paket
+    SELECT harga_per_bulan INTO v_harga FROM Paket_Layanan WHERE id_paket = p_id_paket;
+
+    -- Langkah 3: Tentukan Port Koneksi
+    SELECT COALESCE(MAX(port_koneksi) + 1, 25565) INTO v_port 
+    FROM Instance_Server WHERE id_node = p_id_node;
+
+    -- Langkah 4: Buat Server Baru
+    INSERT INTO Instance_Server (id_pengguna, id_paket, id_node, nama_instance, port_koneksi)
+    VALUES (p_id_pengguna, p_id_paket, p_id_node, p_nama_instance, v_port)
+    RETURNING id_instance INTO v_id_instance;
+
+    -- Langkah 5: Potong Saldo Pengguna
+    UPDATE Pengguna 
+    SET saldo_kredit = saldo_kredit - v_harga 
+    WHERE id_pengguna = p_id_pengguna;
+
+    -- Langkah 6: Catat Riwayat Keuangan
+    INSERT INTO Transaksi (id_pengguna, id_instance, jenis_transaksi, nominal)
+    VALUES (p_id_pengguna, v_id_instance, 'DEPLOY_SERVER', v_harga);
+
+    -- Langkah 7: Permanenkan seluruh perubahan data (Atomicity Success)
+    COMMIT;
+
+    -- Langkah 8: Rakit kembalian JSON
+    p_response := json_build_object(
+        'status', 'success',
+        'pesan', 'Server berhasil di-deploy.',
+        'data', json_build_object(
+            'id_instance', v_id_instance,
+            'port_koneksi', v_port,
+            'saldo_terpotong', v_harga
+        )
+    );
+
+EXCEPTION 
+    WHEN OTHERS THEN
+        -- Jika terjadi error sistem di tengah jalan (misal database putus atau kendala tipe data)
+        -- Batalkan seluruh eksekusi INSERT dan UPDATE sebelumnya secara paksa (Atomicity Failure)
+        ROLLBACK;
+        
+        -- Kembalikan pesan error detail ke backend
+        p_response := json_build_object(
+            'status', 'error',
+            'pesan', 'Terjadi kesalahan sistem, transaksi digagalkan: ' || SQLERRM
+        );
+END;
+$$;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+-- Fungsi Inspektur Trigger
+CREATE OR REPLACE FUNCTION fn_trg_validasi_start_server()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Jika sistem mencoba mengubah status menjadi 'running'
+    IF NEW.status_instance = 'running' THEN
+        -- Pastikan status sebelumnya benar-benar 'stopped'
+        IF OLD.status_instance != 'stopped' THEN
+            -- RAISE EXCEPTION akan langsung menggagalkan transaksi (Hard Error)
+            RAISE EXCEPTION 'Operasi ditolak: Tidak bisa menyalakan server karena status saat ini adalah %', OLD.status_instance;
+        END IF;
+    END IF;
+    
+    RETURN NEW; -- Lolos inspeksi, izinkan update berlanjut
+END;
+$$ LANGUAGE plpgsql;
+
+-- Pemasangan Trigger
+CREATE TRIGGER trg_before_update_instance
+BEFORE UPDATE ON Instance_Server
+FOR EACH ROW
+EXECUTE FUNCTION fn_trg_validasi_start_server();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+CREATE OR REPLACE PROCEDURE sp_start_server(
+    IN p_id_pengguna UUID,
+    IN p_id_instance UUID,
+    INOUT p_response JSON DEFAULT NULL
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    -- Langkah 1: Eksekusi UPDATE (Ini akan otomatis memicu Trigger di atas)
+    UPDATE Instance_Server
+    SET status_instance = 'running'
+    WHERE id_instance = p_id_instance AND id_pengguna = p_id_pengguna;
+
+    -- Langkah 2: Cek apakah data ditemukan (Bisa jadi UUID salah atau bukan milik user tersebut)
+    IF NOT FOUND THEN
+        p_response := json_build_object(
+            'status', 'error',
+            'pesan', 'Server tidak ditemukan atau Anda tidak memiliki akses.'
+        );
+        RETURN;
+    END IF;
+
+    -- Langkah 3: Catat ke Log Aktivasi
+    INSERT INTO Log_Aktivasi (id_instance, aksi, pesan_sistem)
+    VALUES (p_id_instance, 'START', 'Server berhasil dinyalakan.');
+
+    -- Langkah 4: Permanenkan transaksi
+    COMMIT;
+
+    -- Langkah 5: Kembalikan JSON sukses
+    p_response := json_build_object(
+        'status', 'success',
+        'pesan', 'Server sedang proses dinyalakan.'
+    );
+
+EXCEPTION 
+    WHEN OTHERS THEN
+        -- Jika Trigger RAISE EXCEPTION menyala, alur akan otomatis terlempar ke sini
+        ROLLBACK;
+        
+        p_response := json_build_object(
+            'status', 'error',
+            'pesan', SQLERRM -- SQLERRM akan berisi pesan dari RAISE EXCEPTION di Trigger
+        );
+END;
+$$;
+
+
+
+
+-- Fungsi Satpam Pencegat DELETE
+CREATE OR REPLACE FUNCTION fn_trg_soft_delete_instance()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- 1. Matikan mesinnya (set status ke stopped) dan sembunyikan dari sistem (is_active = FALSE)
+    UPDATE Instance_Server 
+    SET is_active = FALSE, 
+        status_instance = 'stopped' 
+    WHERE id_instance = OLD.id_instance;
+    
+    -- 2. Batalkan operasi DELETE fisik agar riwayat transaksi keuangan tetap utuh
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Pemasangan Trigger pada aksi DELETE
+CREATE TRIGGER trg_before_delete_instance
+BEFORE DELETE ON Instance_Server
+FOR EACH ROW
+EXECUTE FUNCTION fn_trg_soft_delete_instance();
+
+
+
+CREATE OR REPLACE PROCEDURE sp_hapus_server(
+    IN p_id_pengguna UUID,
+    IN p_id_instance UUID,
+    INOUT p_response JSON DEFAULT NULL
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    -- Langkah 1: Cek apakah server valid dan milik pengguna tersebut
+    IF NOT EXISTS (SELECT 1 FROM Instance_Server WHERE id_instance = p_id_instance AND id_pengguna = p_id_pengguna) THEN
+        p_response := json_build_object(
+            'status', 'error',
+            'pesan', 'Server tidak ditemukan atau Anda tidak memiliki hak akses.'
+        );
+        RETURN;
+    END IF;
+
+    -- Langkah 2: Lakukan eksekusi DELETE (Otomatis dicegat dan diubah jadi UPDATE oleh Trigger)
+    DELETE FROM Instance_Server 
+    WHERE id_instance = p_id_instance AND id_pengguna = p_id_pengguna;
+
+    -- Langkah 3: Catat jejak digital ke log sistem
+    INSERT INTO Log_Aktivasi (id_instance, aksi, pesan_sistem)
+    VALUES (p_id_instance, 'DESTROY', 'Server berhasil dihancurkan (Soft Delete).');
+
+    -- Langkah 4: Kunci perubahan
+    COMMIT;
+
+    -- Langkah 5: Kembalikan respon sukses
+    p_response := json_build_object(
+        'status', 'success',
+        'pesan', 'Server berhasil dihapus secara permanen dari dasbor.'
+    );
+
+EXCEPTION 
+    WHEN OTHERS THEN
+        ROLLBACK;
+        p_response := json_build_object(
+            'status', 'error',
+            'pesan', SQLERRM
+        );
+END;
+$$;
+
+
+CREATE ROLE akun_backend WITH LOGIN PASSWORD 'password123';
+
+REVOKE ALL ON SCHEMA public FROM public;
+REVOKE ALL ON ALL TABLES IN SCHEMA public FROM akun_backend;
+
+ALTER FUNCTION fn_get_dashboard_json(UUID) SECURITY DEFINER;
+ALTER PROCEDURE sp_buat_instance(UUID, INT, INT, VARCHAR, JSON) SECURITY DEFINER;
+ALTER PROCEDURE sp_start_server(UUID, UUID, JSON) SECURITY DEFINER;
+ALTER PROCEDURE sp_hapus_server(UUID, UUID, JSON) SECURITY DEFINER;
+
+
+-- Izinkan akun masuk ke dalam skema public
+GRANT USAGE ON SCHEMA public TO akun_backend;
+
+-- Berikan izin eksklusif untuk menjalankan logika
+GRANT EXECUTE ON FUNCTION fn_get_dashboard_json(UUID) TO akun_backend;
+GRANT EXECUTE ON PROCEDURE sp_buat_instance(UUID, INT, INT, VARCHAR, JSON) TO akun_backend;
+GRANT EXECUTE ON PROCEDURE sp_start_server(UUID, UUID, JSON) TO akun_backend;
+GRANT EXECUTE ON PROCEDURE sp_hapus_server(UUID, UUID, JSON) TO akun_backend;
+
+
+
+-- Berikan izin memanipulasi data pada tabel-tabel utama
+GRANT SELECT, INSERT, UPDATE, DELETE 
+ON TABLE Pengguna, Paket_Layanan, Node_Server, Instance_Server, Transaksi, Log_Aktivasi 
+TO akun_backend;
+
+
+ALTER PROCEDURE sp_buat_instance(UUID, INT, INT, VARCHAR, JSON) SECURITY INVOKER;
+ALTER PROCEDURE sp_start_server(UUID, UUID, JSON) SECURITY INVOKER;
+ALTER PROCEDURE sp_hapus_server(UUID, UUID, JSON) SECURITY INVOKER;
+
+
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO akun_backend;
+
+
+-- USE CASE 2: Deploy Server
+CREATE OR REPLACE PROCEDURE sp_buat_instance(
+    IN p_id_pengguna UUID,
+    IN p_id_paket INT,
+    IN p_id_node INT,
+    IN p_nama_instance VARCHAR,
+    INOUT p_response JSON DEFAULT NULL
+)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_port INT;
+    v_harga DECIMAL;
+    v_id_instance UUID;
+BEGIN
+    -- Validasi 1: Cek Saldo
+    IF NOT fn_cek_kelayakan_saldo(p_id_pengguna, p_id_paket) THEN
+        ROLLBACK; -- Eksplisit Rollback karena gagal syarat bisnis
+        p_response := json_build_object('status', 'error', 'pesan', 'Saldo tidak mencukupi untuk menyewa paket ini.');
+        RETURN;
+    END IF;
+
+    SELECT harga_per_bulan INTO v_harga FROM Paket_Layanan WHERE id_paket = p_id_paket;
+    SELECT COALESCE(MAX(port_koneksi) + 1, 25565) INTO v_port FROM Instance_Server WHERE id_node = p_id_node;
+
+    INSERT INTO Instance_Server (id_pengguna, id_paket, id_node, nama_instance, port_koneksi)
+    VALUES (p_id_pengguna, p_id_paket, p_id_node, p_nama_instance, v_port)
+    RETURNING id_instance INTO v_id_instance;
+
+    UPDATE Pengguna SET saldo_kredit = saldo_kredit - v_harga WHERE id_pengguna = p_id_pengguna;
+
+    INSERT INTO Transaksi (id_pengguna, id_instance, jenis_transaksi, nominal)
+    VALUES (p_id_pengguna, v_id_instance, 'DEPLOY_SERVER', v_harga);
+
+    COMMIT; -- Eksplisit Commit setelah semua operasi fisik sukses
+
+    p_response := json_build_object(
+        'status', 'success',
+        'pesan', 'Server berhasil di-deploy.',
+        'data', json_build_object('id_instance', v_id_instance, 'port_koneksi', v_port, 'saldo_terpotong', v_harga)
+    );
+END;
+$$;
+
+-- USE CASE 3: Start Server
+CREATE OR REPLACE PROCEDURE sp_start_server(
+    IN p_id_pengguna UUID,
+    IN p_id_instance UUID,
+    INOUT p_response JSON DEFAULT NULL
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    -- Lakukan pembaruan (Trigger validasi status akan otomatis berjalan di sini)
+    UPDATE Instance_Server SET status_instance = 'running' 
+    WHERE id_instance = p_id_instance AND id_pengguna = p_id_pengguna;
+
+    IF NOT FOUND THEN
+        ROLLBACK; -- Eksplisit Rollback karena data tidak ada/bukan miliknya
+        p_response := json_build_object('status', 'error', 'pesan', 'Server tidak ditemukan/bukan milik Anda.');
+        RETURN;
+    END IF;
+
+    INSERT INTO Log_Aktivasi (id_instance, aksi, pesan_sistem)
+    VALUES (p_id_instance, 'START', 'Server berhasil dinyalakan.');
+
+    COMMIT; -- Eksplisit Commit
+    p_response := json_build_object('status', 'success', 'pesan', 'Server sedang proses dinyalakan.');
+END;
+$$;
+
+-- USE CASE 4: Destroy Server
+CREATE OR REPLACE PROCEDURE sp_hapus_server(
+    IN p_id_pengguna UUID,
+    IN p_id_instance UUID,
+    INOUT p_response JSON DEFAULT NULL
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM Instance_Server WHERE id_instance = p_id_instance AND id_pengguna = p_id_pengguna) THEN
+        ROLLBACK; -- Eksplisit Rollback
+        p_response := json_build_object('status', 'error', 'pesan', 'Server tidak ditemukan.');
+        RETURN;
+    END IF;
+
+    -- Eksekusi DELETE (Otomatis dialihkan jadi UPDATE is_active = FALSE oleh Trigger)
+    DELETE FROM Instance_Server WHERE id_instance = p_id_instance AND id_pengguna = p_id_pengguna;
+
+    INSERT INTO Log_Aktivasi (id_instance, aksi, pesan_sistem)
+    VALUES (p_id_instance, 'DESTROY', 'Server berhasil dihancurkan (Soft Delete).');
+
+    COMMIT; -- Eksplisit Commit
+    p_response := json_build_object('status', 'success', 'pesan', 'Server berhasil dihapus permanen.');
+END;
+$$;
+
+
+CREATE OR REPLACE PROCEDURE sp_hapus_server(
+    IN p_id_pengguna UUID,
+    IN p_id_instance UUID,
+    INOUT p_response JSON DEFAULT NULL
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    -- Perbaikan: Tambahkan syarat 'AND is_active = TRUE'
+    IF NOT EXISTS (SELECT 1 FROM Instance_Server WHERE id_instance = p_id_instance AND id_pengguna = p_id_pengguna AND is_active = TRUE) THEN
+        ROLLBACK; 
+        p_response := json_build_object('status', 'error', 'pesan', 'Server tidak ditemukan atau sudah dihancurkan sebelumnya.');
+        RETURN;
+    END IF;
+
+    DELETE FROM Instance_Server WHERE id_instance = p_id_instance AND id_pengguna = p_id_pengguna;
+
+    INSERT INTO Log_Aktivasi (id_instance, aksi, pesan_sistem)
+    VALUES (p_id_instance, 'DESTROY', 'Server berhasil dihancurkan (Soft Delete).');
+
+    COMMIT; 
+    p_response := json_build_object('status', 'success', 'pesan', 'Server berhasil dihapus permanen.');
+END;
+$$;
+
+
+select * from pengguna;
+select * from node_server;
+select * from paket_layanan;
+select * from instance_server;
+select * from log_aktivasi;
