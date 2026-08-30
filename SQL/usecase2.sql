@@ -4,13 +4,13 @@ DECLARE
     v_saldo DECIMAL;
     v_harga DECIMAL;
 BEGIN
-    -- Ambil saldo pengguna saat ini
+    -- saldo pengguna saat ini
     SELECT saldo_kredit INTO v_saldo FROM Pengguna WHERE id_pengguna = p_id_pengguna;
     
-    -- Ambil harga paket layanan
+    -- harga paket layanan
     SELECT harga_per_bulan INTO v_harga FROM Paket_Layanan WHERE id_paket = p_id_paket;
     
-    -- Evaluasi kelayakan
+    -- cek saldo
     IF v_saldo >= v_harga THEN
         RETURN TRUE;
     ELSE
@@ -19,7 +19,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Fungsi pendamping untuk Trigger
+-- fungsi untuk log aktivasi
 CREATE OR REPLACE FUNCTION fn_trg_log_aktivasi()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -29,7 +29,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Pemasangan Trigger pada tabel
+-- trigger after insert agar function fn trg log jalan
 CREATE TRIGGER trg_after_insert_instance
 AFTER INSERT ON Instance_Server
 FOR EACH ROW

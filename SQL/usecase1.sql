@@ -16,13 +16,13 @@ JOIN Node_Server n ON i.id_node = n.id_node
 JOIN Paket_Layanan p ON i.id_paket = p.id_paket
 WHERE i.is_active = TRUE;
 
--- Fungsi untuk usecase 1
+-- fungsi use case 1
 CREATE OR REPLACE FUNCTION fn_get_dashboard_json(p_id_pengguna UUID)
 RETURNS json AS $$
 DECLARE
     hasil_json json;
 BEGIN
-    -- Merakit baris data menjadi array JSON
+    -- buat json data pengguna
     SELECT json_agg(json_build_object(
         'id_instance', id_instance,
         'nama_instance', nama_instance,
@@ -34,12 +34,12 @@ BEGIN
     FROM vw_dashboard_pengguna
     WHERE id_pengguna = p_id_pengguna;
 
-    -- Jika pengguna belum punya server sama sekali
+    -- kalo pengguna belum punya server sama sekali
     IF hasil_json IS NULL THEN
         hasil_json := '[]'::json;
     END IF;
 
-    -- Membungkus hasil akhir dengan pesan status
+    -- buat hasil akhir dengan pesan status
     RETURN json_build_object(
         'status', 'success',
         'data', hasil_json

@@ -1,25 +1,23 @@
--- Fungsi Satpam Pencegat DELETE
+-- fungsi untuk soft delete instance
 CREATE OR REPLACE FUNCTION fn_trg_soft_delete_instance()
 RETURNS TRIGGER AS $$
 BEGIN
-    -- 1. Matikan mesinnya (set status ke stopped) dan sembunyikan dari sistem (is_active = FALSE)
     UPDATE Instance_Server 
     SET is_active = FALSE, 
         status_instance = 'stopped' 
     WHERE id_instance = OLD.id_instance;
     
-    -- 2. Batalkan operasi DELETE fisik agar riwayat transaksi keuangan tetap utuh
     RETURN NULL;
 END;
 $$ LANGUAGE plpgsql;
 
--- Pemasangan Trigger pada aksi DELETE
+-- trigger kalo ada delete
 CREATE TRIGGER trg_before_delete_instance
 BEFORE DELETE ON Instance_Server
 FOR EACH ROW
 EXECUTE FUNCTION fn_trg_soft_delete_instance();
 
--- Stored procedure untuk usecase 4
+-- stored procedure untuk usecase 4
 CREATE OR REPLACE PROCEDURE sp_hapus_server(
     IN p_id_pengguna UUID,
     IN p_id_instance UUID,
@@ -28,7 +26,7 @@ CREATE OR REPLACE PROCEDURE sp_hapus_server(
 LANGUAGE plpgsql
 AS $$
 BEGIN
-    -- Perbaikan: Tambahkan syarat 'AND is_active = TRUE'
+
     IF NOT EXISTS (SELECT 1 FROM Instance_Server WHERE id_instance = p_id_instance AND id_pengguna = p_id_pengguna AND is_active = TRUE) THEN
         ROLLBACK; 
         p_response := json_build_object('status', 'error', 'pesan', 'Server tidak ditemukan atau sudah dihancurkan sebelumnya.');
