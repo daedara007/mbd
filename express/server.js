@@ -21,8 +21,22 @@ app.get('/api/dashboard/:id_pengguna', async (req, res) => {
         const { id_pengguna } = req.params;
         // Panggil Function, Postgres langsung mengembalikan JSON utuh
         const result = await pool.query('SELECT fn_get_dashboard_json($1) AS data_dasbor', [id_pengguna]);
-        
+
         res.json(result.rows[0].data_dasbor);
+    } catch (error) {
+        res.status(500).json({ status: 'error', pesan: error.message });
+    }
+});
+
+app.get('/api/saldo/:id_pengguna', async (req, res) => {
+    try {
+        const { id_pengguna } = req.params;
+
+        // Panggil Procedure dengan format Simple Query Protocol
+        const query = `CALL sp_cek_saldo_pengguna('${id_pengguna}', NULL)`;
+        const result = await pool.query(query);
+
+        res.json(result.rows[0].p_response);
     } catch (error) {
         res.status(500).json({ status: 'error', pesan: error.message });
     }
@@ -34,12 +48,12 @@ app.get('/api/dashboard/:id_pengguna', async (req, res) => {
 app.post('/api/server/deploy', async (req, res) => {
     try {
         const { id_pengguna, id_paket, id_node, nama_instance } = req.body;
-        
+
         // FIX: Menggunakan Simple Query Protocol (tanpa parameter array $1, $2)
         // Perhatikan penggunaan tanda kutip satu (') untuk tipe data UUID dan VARCHAR
         const query = `CALL sp_buat_instance('${id_pengguna}', ${id_paket}, ${id_node}, '${nama_instance}', NULL)`;
         const result = await pool.query(query);
-        
+
         res.json(result.rows[0].p_response);
     } catch (error) {
         res.status(500).json({ status: 'error', pesan: error.message });
@@ -52,10 +66,10 @@ app.post('/api/server/deploy', async (req, res) => {
 app.post('/api/server/start', async (req, res) => {
     try {
         const { id_pengguna, id_instance } = req.body;
-        
+
         const query = `CALL sp_start_server('${id_pengguna}', '${id_instance}', NULL)`;
         const result = await pool.query(query);
-        
+
         res.json(result.rows[0].p_response);
     } catch (error) {
         res.status(500).json({ status: 'error', pesan: error.message });
@@ -68,10 +82,10 @@ app.post('/api/server/start', async (req, res) => {
 app.delete('/api/server/destroy', async (req, res) => {
     try {
         const { id_pengguna, id_instance } = req.body;
-        
+
         const query = `CALL sp_hapus_server('${id_pengguna}', '${id_instance}', NULL)`;
         const result = await pool.query(query);
-        
+
         res.json(result.rows[0].p_response);
     } catch (error) {
         res.status(500).json({ status: 'error', pesan: error.message });
