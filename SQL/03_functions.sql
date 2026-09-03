@@ -96,6 +96,24 @@ BEGIN
         );
     END IF;
 
+    IF OLD.waktu_kedaluwarsa IS DISTINCT FROM NEW.waktu_kedaluwarsa AND NEW.waktu_kedaluwarsa > OLD.waktu_kedaluwarsa THEN
+        INSERT INTO Log_Aktivasi (id_instance, aksi, pesan_sistem)
+        VALUES (
+            NEW.id_instance, 
+            'RENEW', 
+            'Masa aktif server diperpanjang hingga ' || TO_CHAR(NEW.waktu_kedaluwarsa, 'YYYY-MM-DD HH24:MI:SS')
+        );
+    END IF;
+
+    IF OLD.is_active IS DISTINCT FROM NEW.is_active AND NEW.is_active = FALSE THEN
+        INSERT INTO Log_Aktivasi (id_instance, aksi, pesan_sistem)
+        VALUES (
+            NEW.id_instance, 
+            'DESTROY', 
+            'Server berhasil dihancurkan (Soft Delete).'
+        );
+    END IF;
+
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;

@@ -134,9 +134,6 @@ BEGIN
 
     DELETE FROM Instance_Server WHERE id_instance = p_id_instance AND id_pengguna = p_id_pengguna;
 
-    INSERT INTO Log_Aktivasi (id_instance, aksi, pesan_sistem)
-    VALUES (p_id_instance, 'DESTROY', 'Server berhasil dihancurkan (Soft Delete).');
-
     COMMIT; 
     p_response := json_build_object('status', 'success', 'pesan', 'Server berhasil dihapus permanen.');
 END;
@@ -411,9 +408,6 @@ BEGIN
 
     INSERT INTO Transaksi (id_pengguna, id_instance, jenis_transaksi, nominal)
     VALUES (p_id_pengguna, p_id_instance, 'PERPANJANG_SERVER - ' || v_nama_instance, v_harga);
-
-    INSERT INTO Log_Aktivasi (id_instance, aksi, pesan_sistem)
-    VALUES (p_id_instance, 'RENEW', 'Masa aktif server berhasil diperpanjang 30 hari.');
 
     COMMIT;
 
