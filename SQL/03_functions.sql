@@ -76,7 +76,7 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION fn_trg_log_update_instance()
 RETURNS TRIGGER AS $$
 BEGIN
-    -- 1. Deteksi perubahan Status (START / STOP)
+    
     IF OLD.status_instance IS DISTINCT FROM NEW.status_instance THEN
         INSERT INTO Log_Aktivasi (id_instance, aksi, pesan_sistem)
         VALUES (
@@ -86,7 +86,7 @@ BEGIN
         );
     END IF;
 
-    -- 2. Deteksi perubahan Nama (RENAME)
+
     IF OLD.nama_instance IS DISTINCT FROM NEW.nama_instance THEN
         INSERT INTO Log_Aktivasi (id_instance, aksi, pesan_sistem)
         VALUES (
