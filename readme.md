@@ -9,4 +9,6 @@ DB_PASSWORD=password123
 
 POSTGRES_USER=superadmin
 POSTGRES_PASSWORD=password123
+
+JWT_SECRET=rahasia_jwt_super_aman_123
 ```
