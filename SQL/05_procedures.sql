@@ -569,8 +569,8 @@ DECLARE
     hasil_json json;
 BEGIN
 
-    IF NOT EXISTS (SELECT 1 FROM Instance_Server WHERE id_instance = p_id_instance AND id_pengguna = p_id_pengguna) THEN
-        p_response := json_build_object('status', 'error', 'pesan', 'Server tidak ditemukan atau bukan milik Anda.');
+    IF NOT EXISTS (SELECT 1 FROM Instance_Server WHERE id_instance = p_id_instance AND id_pengguna = p_id_pengguna AND is_active = TRUE) THEN
+        p_response := json_build_object('status', 'error', 'pesan', 'Server tidak ditemukan, bukan milik Anda, atau sudah dihapus.');
         RETURN;
     END IF;
 
