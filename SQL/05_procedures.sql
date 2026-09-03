@@ -12,7 +12,21 @@ DECLARE
     v_port INT;
     v_harga DECIMAL;
     v_id_instance UUID;
+    v_nama_bersih VARCHAR;
 BEGIN
+    v_nama_bersih := TRIM(p_nama_instance);
+
+    IF v_nama_bersih IS NULL OR v_nama_bersih = '' THEN
+        ROLLBACK;
+        p_response := json_build_object('status', 'error', 'pesan', 'Nama server tidak boleh kosong.');
+        RETURN;
+    END IF;
+
+    IF LENGTH(v_nama_bersih) < 3 THEN
+        ROLLBACK;
+        p_response := json_build_object('status', 'error', 'pesan', 'Nama server minimal harus 3 karakter.');
+        RETURN;
+    END IF;
 
     IF NOT fn_cek_kelayakan_saldo(p_id_pengguna, p_id_paket) THEN
         ROLLBACK;
@@ -24,13 +38,13 @@ BEGIN
     SELECT COALESCE(MAX(port_koneksi) + 1, 25565) INTO v_port FROM Instance_Server WHERE id_node = p_id_node;
 
     INSERT INTO Instance_Server (id_pengguna, id_paket, id_node, nama_instance, port_koneksi, waktu_kedaluwarsa)
-    VALUES (p_id_pengguna, p_id_paket, p_id_node, p_nama_instance, v_port, CURRENT_TIMESTAMP + INTERVAL '30 days')
+    VALUES (p_id_pengguna, p_id_paket, p_id_node, v_nama_bersih, v_port, CURRENT_TIMESTAMP + INTERVAL '30 days')
     RETURNING id_instance INTO v_id_instance;
 
     UPDATE Pengguna SET saldo_kredit = saldo_kredit - v_harga WHERE id_pengguna = p_id_pengguna;
 
     INSERT INTO Transaksi (id_pengguna, id_instance, jenis_transaksi, nominal)
-    VALUES (p_id_pengguna, v_id_instance, 'DEPLOY_SERVER - ' || p_nama_instance, v_harga);
+    VALUES (p_id_pengguna, v_id_instance, 'DEPLOY_SERVER - ' || v_nama_bersih, v_harga);
 
     COMMIT;
 
