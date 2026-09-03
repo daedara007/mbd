@@ -6,4 +6,7 @@ DB_PORT=5432
 DB_NAME=panel_management
 DB_USER=akun_backend
 DB_PASSWORD=password123
+
+POSTGRES_USER=superadmin
+POSTGRES_PASSWORD=password123
 ```

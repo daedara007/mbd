@@ -5,10 +5,11 @@ services:
     build: . 
     container_name: panel_database
     restart: unless-stopped
+    env_file: ../.env
     environment:
-      POSTGRES_USER: superadmin
-      POSTGRES_PASSWORD: password123
-      POSTGRES_DB: panel_management
+      POSTGRES_USER: ${POSTGRES_USER:-superadmin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password123}
+      POSTGRES_DB: ${DB_NAME:-panel_management}
  
     command: postgres -c shared_preload_libraries='pg_cron' -c cron.database_name='panel_management'
 
