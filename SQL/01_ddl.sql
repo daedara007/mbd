@@ -68,5 +68,7 @@ CREATE TABLE Log_Aktivasi (
 );
 
 CREATE INDEX idx_instance_pengguna ON Instance_Server(id_pengguna);
+CREATE INDEX idx_transaksi_pengguna ON Transaksi(id_pengguna);
+CREATE INDEX idx_log_instance ON Log_Aktivasi(id_instance);
 
 ALTER DATABASE panel_management SET timezone TO 'Asia/Makassar';
