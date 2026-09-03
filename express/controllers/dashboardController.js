@@ -28,7 +28,7 @@ const topupSaldo = async (req, res) => {
         if (!id_pengguna_tujuan || !nominal) {
             return res.status(400).json({ status: 'error', pesan: 'id_pengguna_tujuan dan nominal wajib diisi.' });
         }
-        
+
         const query = `CALL sp_topup_saldo('${id_pengguna_tujuan}', ${nominal}, NULL)`;
         const result = await pool.query(query);
         res.json(result.rows[0].p_response);
@@ -49,7 +49,7 @@ const getDaftarPengguna = async (req, res) => {
 
 const getRiwayatTransaksi = async (req, res) => {
     try {
-        const id_pengguna = req.user.id_pengguna; // mutlak dari token JWT
+        const id_pengguna = req.user.id_pengguna;
         const query = `CALL sp_get_riwayat_transaksi('${id_pengguna}', NULL)`;
         const result = await pool.query(query);
         res.json(result.rows[0].p_response);

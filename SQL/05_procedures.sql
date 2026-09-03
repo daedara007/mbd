@@ -552,7 +552,6 @@ BEGIN
 END;
 $$;
 
--- stored procedure untuk melihat log aktivasi milik instance tertentu
 CREATE OR REPLACE PROCEDURE sp_get_log_aktivasi(
     IN p_id_pengguna UUID,
     IN p_id_instance UUID,
@@ -563,13 +562,12 @@ AS $$
 DECLARE
     hasil_json json;
 BEGIN
-    -- Validasi 1: Pastikan instance tersebut adalah milik pengguna yang me-request
+
     IF NOT EXISTS (SELECT 1 FROM Instance_Server WHERE id_instance = p_id_instance AND id_pengguna = p_id_pengguna) THEN
         p_response := json_build_object('status', 'error', 'pesan', 'Server tidak ditemukan atau bukan milik Anda.');
         RETURN;
     END IF;
 
-    -- Ambil log
     SELECT json_agg(json_build_object(
         'id_log', id_log,
         'aksi', aksi,

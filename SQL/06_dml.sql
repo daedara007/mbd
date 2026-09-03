@@ -16,7 +16,6 @@ INSERT INTO Pengguna (nama, email, password_hash, role, saldo_kredit) VALUES
 ('Budi Santoso', 'budi@example.com', '$2b$10$LOVQPbuLfAR8EPgqb3Exe.bzDdcgZo7OeIp471jx20NW8NsJhvng2', 'user', 25000.00),
 ('Siti Aminah', 'siti@example.com', '$2b$10$LOVQPbuLfAR8EPgqb3Exe.bzDdcgZo7OeIp471jx20NW8NsJhvng2', 'user', 150000.00);
 
--- Dummy Instances (menggunakan subquery agar dinamis karena id_pengguna UUID)
 INSERT INTO Instance_Server (id_pengguna, id_paket, id_node, nama_instance, port_koneksi, status_instance, is_active, waktu_kedaluwarsa) VALUES
 (
     (SELECT id_pengguna FROM Pengguna WHERE email = 'kevin@example.com'), 

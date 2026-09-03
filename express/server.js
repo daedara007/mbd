@@ -10,12 +10,10 @@ const serverRoutes = require('./routes/serverRoutes');
 const app = express();
 app.use(express.json());
 
-// Routes
 app.use('/api/auth', authRoutes);
 app.use('/api', dashboardRoutes);
 app.use('/api/server', serverRoutes);
 
-// Jalankan Server
 const PORT = 3000;
 app.listen(PORT, () => {
     console.log(`api berjalan di http://localhost:${PORT}`);

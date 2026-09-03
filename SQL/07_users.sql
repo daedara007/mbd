@@ -1,4 +1,3 @@
--- akun backend
 CREATE ROLE akun_backend WITH LOGIN PASSWORD 'password123';
 
 
