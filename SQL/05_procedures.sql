@@ -56,6 +56,12 @@ LANGUAGE plpgsql
 AS $$
 BEGIN
 
+    IF NOT EXISTS (SELECT 1 FROM Instance_Server WHERE id_instance = p_id_instance AND id_pengguna = p_id_pengguna AND is_active = TRUE) THEN
+        ROLLBACK;
+        p_response := json_build_object('status', 'error', 'pesan', 'Server tidak ditemukan, bukan milik Anda, atau sudah dihapus.');
+        RETURN;
+    END IF;
+
     IF fn_cek_server_kedaluwarsa(p_id_instance) THEN
         ROLLBACK;
         p_response := json_build_object('status', 'error', 'pesan', 'Gagal menyalakan server. Masa aktif server telah kedaluwarsa, silakan perpanjang terlebih dahulu.');
