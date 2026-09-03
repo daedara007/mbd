@@ -11,7 +11,7 @@ INSERT INTO Paket_Layanan (nama_paket, vcore_cpu, ram_mb, storage_gb, harga_per_
 ('Ultimate (Network)', 16, 16384, 250, 450000.00);
 
 INSERT INTO Pengguna (nama, email, password_hash, role, saldo_kredit) VALUES
-('Kevin Jonathan', 'kevin@example.com', '$2b$10$LOVQPbuLfAR8EPgqb3Exe.bzDdcgZo7OeIp471jx20NW8NsJhvng2', 'admin', 500000.00),
+('Kevin Jonathan', 'kevin@example.com', '$2b$10$LOVQPbuLfAR8EPgqb3Exe.bzDdcgZo7OeIp471jx20NW8NsJhvng2', 'user', 500000.00),
 ('Admin Test', 'admin@example.com', '$2b$10$LOVQPbuLfAR8EPgqb3Exe.bzDdcgZo7OeIp471jx20NW8NsJhvng2', 'admin', 15000.00),
 ('Budi Santoso', 'budi@example.com', '$2b$10$LOVQPbuLfAR8EPgqb3Exe.bzDdcgZo7OeIp471jx20NW8NsJhvng2', 'user', 25000.00),
 ('Siti Aminah', 'siti@example.com', '$2b$10$LOVQPbuLfAR8EPgqb3Exe.bzDdcgZo7OeIp471jx20NW8NsJhvng2', 'user', 150000.00);
