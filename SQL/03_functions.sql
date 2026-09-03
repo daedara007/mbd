@@ -46,7 +46,8 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION fn_trg_validasi_start_server()
 RETURNS TRIGGER AS $$
 BEGIN
-    IF NEW.status_instance = 'running' THEN
+    -- Hanya jalankan validasi start jika status benar-benar BERUBAH menjadi 'running'
+    IF NEW.status_instance = 'running' AND OLD.status_instance IS DISTINCT FROM NEW.status_instance THEN
         IF fn_cek_server_kedaluwarsa(NEW.id_instance) THEN
             RAISE EXCEPTION 'Operasi ditolak: Server telah kedaluwarsa. Silakan perpanjang masa aktif server terlebih dahulu.';
         END IF;
