@@ -2,13 +2,16 @@ version: '3.8'
 
 services:
   postgres:
-    image: postgres:16
+    build: . 
     container_name: panel_database
     restart: unless-stopped
     environment:
       POSTGRES_USER: superadmin
       POSTGRES_PASSWORD: password123
       POSTGRES_DB: panel_management
+ 
+    command: postgres -c shared_preload_libraries='pg_cron' -c cron.database_name='panel_management'
+
     ports:
       - "5432:5432"
     volumes:
