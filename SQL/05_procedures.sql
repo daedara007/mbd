@@ -77,9 +77,6 @@ BEGIN
         RETURN;
     END IF;
 
-    INSERT INTO Log_Aktivasi (id_instance, aksi, pesan_sistem)
-    VALUES (p_id_instance, 'START', 'Server berhasil dinyalakan.');
-
     COMMIT;
     p_response := json_build_object('status', 'success', 'pesan', 'Server sedang proses dinyalakan.');
 END;
@@ -114,9 +111,6 @@ BEGIN
     UPDATE Instance_Server 
     SET status_instance = 'stopped' 
     WHERE id_instance = p_id_instance AND id_pengguna = p_id_pengguna;
-
-    INSERT INTO Log_Aktivasi (id_instance, aksi, pesan_sistem)
-    VALUES (p_id_instance, 'STOP', 'Server berhasil dimatikan oleh pengguna.');
 
     COMMIT;
     p_response := json_build_object('status', 'success', 'pesan', 'Server berhasil dimatikan.');
@@ -184,9 +178,6 @@ BEGIN
         p_response := json_build_object('status', 'error', 'pesan', 'Server tidak ditemukan atau bukan milik Anda.');
         RETURN;
     END IF;
-
-    INSERT INTO Log_Aktivasi (id_instance, aksi, pesan_sistem)
-    VALUES (p_id_instance, 'RENAME', 'Nama server diubah menjadi: ' || v_nama_bersih);
 
     COMMIT;
     p_response := json_build_object(

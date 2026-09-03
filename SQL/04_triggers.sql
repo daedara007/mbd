@@ -12,3 +12,8 @@ CREATE TRIGGER trg_before_delete_instance
 BEFORE DELETE ON Instance_Server
 FOR EACH ROW
 EXECUTE FUNCTION fn_trg_soft_delete_instance();
+
+CREATE TRIGGER trg_after_update_instance
+AFTER UPDATE ON Instance_Server
+FOR EACH ROW
+EXECUTE FUNCTION fn_trg_log_update_instance();
